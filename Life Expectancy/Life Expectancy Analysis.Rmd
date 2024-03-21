@@ -1,0 +1,596 @@
+---
+title: "Life Expectancy Analysis"
+output: word_document
+date: "2023-01-10"
+---
+
+A very hearty welcome to you.
+Let's proceed to read the first public dataset that will be analyzed.
+This dataset has been made available for public use by Global Health Observatory(GHO) and it contains several factors deemed as determinants of the life expectancy rates in each country.
+
+```{r}
+life <- read.csv("Life Expectancy Data.csv", header = TRUE, sep = ",")
+```
+
+**TEST FOR NORMALITY OF DISTRIBUTION**
+
+The dataset has been loaded successfully and the main focus will be on the Life.expectancy column, let's go ahead to test for normality of the distribution by plotting the **Histogram**
+
+```{r}
+hist(life$Life.expectancy)
+```
+As seen above, the distribution appears to peak in the middle but it is however skewed to the left, in other words the distribution is negatively skewed
+
+There's a need to conduct more tests to investigate the normality of the distribution. Moving on, we'll make a **Q-Q plot** of the distribution 
+```{r}
+qqnorm(life$Life.expectancy);qqline(life$Life.expectancy)
+```
+We can safely assume that all our doubts have been confirmed as the plot seems to fall about a straight line but still appears to be heavy-tailed.
+
+Next up is a **Boxplot** to further test for normality
+```{r}
+boxplot(life$Life.expectancy)
+```
+As seen above, the box plot shows the presence of outliers right below the Q1 percentile and the median is quite closer to the top of the box while the whisker is shorter on the upper end of the box. This fully indicates a negatively skewed distribution that does not conform to normality.
+
+Lastly, we will conduct the **Shapiro_Wilk Normality** test using a default confidence level of 95%
+
+HO : The population is normally distributed
+H1 : The population is not normally distributed
+
+```{r}
+shapiro.test(life$Life.expectancy)
+```
+Since the p-value is less than α(0.05), the null hypothesis(H0) will be rejected. Therefore the life.expectancy data is not normally distributed
+
+```{r}
+summary(life$Life.expectancy)
+```
+**HYPOTHESIS TESTING**
+
+**ONE SAMPLE T-TEST**
+
+Let's examine our distribution and conduct t-test on life expectancy to determine the interval where the mean lies when hypothesized mean is 0.
+
+Usually, the t-test is used for normal distribution but based on the condition that N>50, we can also conduct the test on our data.
+
+```{r}
+t.test(life$Life.expectancy)
+```
+Since the p-value is less than α, therefore at a 95% confidence, the mean life expectancy of the data lies between 68.88 and 69.57.
+
+It's time to tackle a real-life problem with the t-test when the hypothesized mean is given.
+According to *worldometer.com*, the life expectancy for humans(both sexes) in 2015 was 72.3, let's try and confirm if this mean value of life expectancy is statistically different from our population sample at a confidence level of 95%
+
+Firstly, we'll extract the data for 2015 into an object called life_2015
+```{r}
+life_2015 <- life[life$Year == '2015',]
+```
+Firstly, we'll extract the life expectancy values for 2015 into an object called life_exp2015
+```{r}
+life_exp2015 <- life_2015$Life.expectancy
+```
+H0 - mean = 72.3
+H1 - mean != 72.3
+
+Using the t-test statistic at α = 0.05 
+
+```{r}
+t.test(life_exp2015-72.3, conf.level=0.95)
+```
+The p-value is greater than the significance level so we'll accept the null Hypothesis.
+In conclusion, the life expectancy as declared by worldodometer.com is statistically significant as compared with the data
+
+**TWO-TAILED TEST**
+
+Firstly, let's extract the 2014 data into an object
+```{r}
+life_2014 <- life[life$Year == '2014',]
+```
+
+The value of **n** for the 2014 data is 183, we'll then calculate the mean and standard deviation values
+```{r}
+life_exp2014 <- life_2014$Life.expectancy
+paste("The mean(μ1) life expectancy in 2014 is", mean(life_exp2014)); paste("While the standard deviation is",sd(life_exp2014))
+```
+The value of **n** for the 2015 data is also 183, we'll then calculate the mean and standard deviation values
+
+```{r}
+paste("The mean life(μ2) expectancy in 2015 is", mean(life_exp2015)); paste("While the standard deviation is",sd(life_exp2015))
+```
+It's time to perform a two-tailed test with df(degrees of freedom) = 364 and  α = 0.05. 
+H0 : μ1 = μ2
+H1 : μ1 != μ2
+Reject H0 if the t statistic is above or below the critical values.
+
+*Computing the upper critical values for rejecting H0*
+```{r}
+round(qt(0.975, df=364), digits = 2)
+```
+
+*Computing the lower critical values for rejecting H0*
+```{r}
+round(qt(0.025, df=364), digits = 2)
+```
+Calculating the pooled variance for the two mean values
+Pooled variance = 69.6
+
+calculating the t-statistic for the two-tailed test
+```{r}
+# t statistic
+stat <- ( 71.62 - 71.54 ) /( sqrt(69.6) * sqrt(1/183 + 1/183) )
+paste("t-statistic, t = ", round((stat), digits = 2))
+```
+
+Calculating the upper confidence level
+```{r}
+#Confidence Intervals
+71.62 - 71.54 + 2 * sqrt(69.6) * sqrt(1/183 + 1/183)
+```
+Calculating the lower confidence level
+```{r}
+71.62 - 71.54 - 2 * sqrt(69.6) * sqrt(1/183 + 1/183)
+```
+For a Two-tailed test with 364 df and α = 0.05, therefore we accept the null hypothesis since t(=0.09) is neither greater than 1.97 or lesser than -1.97
+
+95% Confidence interval is -1.66 to 1.82
+
+
+**Further analysis on the T-test**
+
+According to the World Economic Forum, countries that spend more on healthcare tend to have higher life expectancies.
+Since the data is based on how health care expenditures and other related factors affect life expectancy, several countries have improved on their health care expenditures over the years as evidenced in the data
+The question posed is now to examine if the theory postulated conforms with the data
+
+We'll extract 2010 and 2015 data simultaneously for developing countries
+
+```{r}
+sample1 <- life[life$Year == '2010' & life$Status == 'Developing', ]
+sample2 <- life[life$Year == '2015' & life$Status == 'Developing', ]
+```
+
+Read the life expectancy values for each year into separate objects
+```{r}
+sample1_exp <- sample1$Life.expectancy
+sample2_exp <- sample2$Life.expectancy
+```
+
+Create a data frame for the values
+
+```{r}
+df <- data.frame(
+  country = c(sample1$Country),
+  life10 = c(sample1_exp),
+  life15 = c(sample2_exp)
+  )
+```
+
+Calculating the differences between the life expectancy values in 2015 and that of 2010, thereafter we'll bind the values into the previously created dataframe
+```{r}
+difference = c(df$life10 - df$life15)
+df <- cbind(df, difference)
+```
+
+
+Stating the hypothesis that will be tested
+H0 : µd = 0    (This implies that no difference between the values in 2010 and 2015)
+H1 : µd  > 0 
+
+Let's attempt to test using one sample(which is the life expectancy differences)
+While n = 151, let's calculate the mean difference and standard deviation difference
+
+```{r}
+x_diff <- df$difference
+paste("xdiff =", mean(x_diff)); paste("sdiff = ", sd(x_diff)); paste("n =", nrow(df))
+```
+
+Calculating the Critical region(1-tailed) and the test statistic for the mean difference since this is a one-sample test
+
+```{r}
+qt(0.95, df=150); mean(x_diff)*sqrt(151)/sd(x_diff)
+```
+Critical region is 1.655076
+
+While the T-statistic is -6.793293
+
+The t-value indicates a negative value, we'll proceed to calculate the p-value 
+```{r}
+pt(-6.79, df = 150)
+```
+Since the p-value is less than 0.05, we can reject H0 and conclude that there's a significant difference between the life expectancy values in 2010 and 2015
+That is life expectancy(2015) > life expectancy(2010)
+
+
+Calculating one sample t-test to corroborate the t-statistic
+```{r}
+t.test(x_diff, conf.level=0.95)
+```
+The p-value is less than 0.05 so the null hypothesis is rejected 
+
+
+**PAIRED T-TEST**
+
+In continuation, we are going to load life expectancy data from 1993(separate from the data).
+Thereafter, we'll compare with 2015 data and we want to test the hypotheses that these samples have been drawn from the same population (null hypothesis) or different populations (alternate hypothesis).
+
+```{r}
+df2 <- read.csv("Life Expectancy 1993.csv", header = TRUE, sep = ","); df2exp <- df2$Life.expectancy.1993
+df3 <- life[life$Year == '2009',] ; df3exp <- df3$Life.expectancy
+```
+
+
+Before proceeding to conduct the t-test, we'll test for the homogeneity of variances using the Bartlett test
+```{r}
+bartlett.test(c(df2exp,df3exp), c(rep(1,183), rep(2,183)))
+```
+In this case, p=0.001066 which is less than 0.05, so we reject the null hypothesis that the variances are equal – in other words, homogeneity of variance does not exist for the two samples.
+
+
+Conducting the t.test with two dependent samples
+```{r}
+t.test(df2exp, df3exp, alternative="two.sided", paired=FALSE, var.equal=FALSE)
+```
+Since the p-value is less than 0.05, we can reject the null hypothesis and conclude that the true mean difference between the samples is equal to zero.
+
+
+**ONE-WAY ANALYSIS OF VARIANCE(ANOVA)**
+
+Proceeding to ANOVA, let's load a dataset that contains details about sales from 3 different branches of a supermarket chain
+```{r}
+super <- read.csv("Supermarket Sales.csv", header = TRUE, sep = ",")
+```
+
+Separating the data about each branches into A, B and C respectively
+```{r}
+A = super[super$Branch == 'A', 17]
+B = super[super$Branch == 'B', 17]
+C = super[super$Branch == 'C', 17]
+Rate <- data.frame(
+  BranchA = A,
+  BranchB = B,
+  BranchC = C
+)
+```
+
+The Customer ratings for different branches of a supermarket chain have been gathered, we'll now compare the ratings, and check to see if are there any differences in the mean ratings.
+
+Let's make a boxplot of the various branch ratings and interpret
+```{r}
+shops <- list(BranchA = A, BranchB = B, BranchC = C)
+boxplot(shops)
+```
+
+The mean values of the three branches are nearly the same with branch B's mean rating a little lower than the others
+
+
+Stacking the data together, we have the code below
+```{r}
+d <- stack(shops)
+```
+
+Analyzing the data using the One-way ANOVA test
+
+Stating the null Hypothesis
+
+H0 : μ1 = μ2 = μ3
+
+H1: not all means are equal 
+```{r}
+oneway.test(values ~ ind, data = d)
+```
+To interpret the results, the p-value is greater than 0.05, therefore, the null hypothesis is accepted 
+
+In other words, the mean customer ratings for branches A, B, and C are the same.
+
+Analyzing the data further out
+```{r}
+res <- aov(values ~ ind, data = d)
+res
+```
+```{r}
+summary(res)
+```
+Studying the output of the ANOVA table above we see that the F-statistic is 1.904 with a p-value equal to 0.15. We clearly accept the null hypothesis of equal means for all branches indicating that there is no statistical difference between the mean values in the 3 branches
+
+
+fitting the data using a linear model
+```{r}
+res2 <- lm(values ~ ind, data = d)
+summary(res2)
+```
+Since the p-value is greater than 0.05, we can conclude that the model fit is not statistically significant i.e. the coefficient related with the variable is zero and there exist no relationship between them.
+
+
+**NON-PARAMETRIC TEST**
+
+Using the same Supermarket data, we can also determine if there are any statistical differences between the means of the three branches using the Kruskal-Wallis H Test
+
+H0 : μ1 = μ2 = μ3
+
+```{r}
+kruskal.test(d$values~d$ind)
+```
+The p-value > 0.05, so we accept the null Hypothesis
+Since the H0 has been accepted and established that indeed, the means of the groups are similar, there wouldn't be any need for a Multiple comparison test to determine what is driving the difference in the means.
+
+Testing for the Homogeneity of Variance using the Bartlett test
+
+```{r}
+bartlett.test(d$values~d$ind)
+```
+We conclude that the variances across the three branches is the same.
+
+
+Let's check using the Shapiro test whether the data for each branch is normally distributed
+
+Branch A
+```{r}
+shapiro.test(A)
+```
+
+Branch B
+```{r}
+shapiro.test(B)
+```
+
+Branch C
+```{r}
+shapiro.test(C)
+```
+
+**MULTIPLE LINEAR REGRESSION**
+
+For the linear regression model, we'll take a look at the dataset on the prices of houses based on some factors.
+
+Let's read the data into an object called *House*
+```{r}
+House <- read.csv("kc_house_data.csv", header = TRUE, sep = ",")
+```
+
+
+To clean the data we'll remove all the data that shows the house was renovated, has a waterfront, and has a view since most of them have not been renovated.
+
+
+```{r}
+House=subset(House, yr_renovated<=0)
+House=subset(House, waterfront<=0)
+House=subset(House, view<=0)
+```
+
+Since we've dropped the values above, we'll then proceed to drop unnecessary columns such as id, date, waterfront, view, yr_renovated, and zipcode.
+```{r}
+House=House[,-c(1,2,8,9,14,15)]
+```
+
+Calculating the level of correlation of the features with the House prices
+```{r}
+cor(House)
+```
+
+Calculating the test of correlation significance between the house prices and other variables
+
+Correlation test of significance of Price and Bedrooms
+```{r}
+cor.test(House$price,House$bedrooms)
+```
+We have p-value = 2.2e-16. p-value < 0.05 as the significance level, so a null hypothesis of zero correlation, i.e. no dependence between price and bedrooms, can be rejected.
+
+
+Correlation test of significance of Price and Bathrooms
+```{r}
+cor.test(House$price,House$bathrooms)
+```
+Here, p-value = 2.2e-16. p-value < 0.05 as the significance level, so a null hypothesis of zero correlation, is to be rejected as there is a significant measurement between the two variables
+
+Correlation test of significance of Price and Sqft_living
+```{r}
+cor.test(House$price,House$sqft_living)
+```
+We have p-value = 2.2e-16. p-value < 0.05 as the significance level, so a null hypothesis no dependence between price and sqft_living, is to be rejected
+
+Correlation test of significance of Price and Floors
+```{r}
+cor.test(House$price,House$floors)
+```
+We have p-value = 2.2e-16. p-value < 0.05 as the significance level, so a null hypothesis of zero correlation, i.e. no dependence between price and floors, is to be rejected. There is a measured relationship.
+
+Correlation test of significance of Price and condition
+```{r}
+cor.test(House$price,House$condition)
+```
+Here, p-value = 0.000245. p-value < 0.05 as significance level, so a null hypothesis of zero correlation, is to be rejected as there is a significant measurement between the two variables
+
+Correlation test of significance of Price and grade
+```{r}
+cor.test(House$price,House$grade)
+```
+
+Correlation test of significance of Price and Sqft_above
+```{r}
+cor.test(House$price,House$sqft_above)
+```
+
+Correlation test of significance of Price and Sqft_basement
+```{r}
+cor.test(House$price,House$sqft_basement)
+```
+
+Correlation test of significance of Price and Sqft_living15
+```{r}
+cor.test(House$price,House$sqft_living15)
+```
+In summary, There's a relationship between price and all the variables tested
+
+**Fitting the linear model**
+
+HO: No measured relationship between the Price and the predictor variables
+H1: There is a statistically significant relationship between the Price and the predictor variables
+
+Response variable: Price  
+Predictor (independent) variables: bedrooms, bathrooms, sqft_living, floors, condition, grade, sqft_above, sqft_living15
+
+```{r}
+results <- lm(price ~ bedrooms+bathrooms+sqft_living+floors+condition+grade+sqft_above+sqft_living15, data=House)
+summary(results)
+```
+Since F = 2721 (p = 2.2e-16) is less than a 0.05 significance level, we reject the null hypothesis of lack of any measured relationship between y and the set of predictor variables. 
+
+Calculating the 2.5% and 97.5% confidence interval critical values for all estimated parameters
+
+```{r}
+confint(results)
+```
+
+```{r}
+plot(results, 2)
+```
+This model seems better. Indeed, the second graph seems to follow a straight line and the first graph has an approximately horizontal line, which is what we wanted.
+
+
+Let's predict the house price of a house with the details below
+```{r}
+paste("The price is",round(pred_1 <- predict(results, data.frame(bedrooms=6, bathrooms=4, sqft_living=5060, floors=3, condition=5, grade=10, sqft_above=3000, sqft_basement=2100, sqft_living15=4000)), digits =2))
+
+```
+
+```{r}
+predict(results, data.frame(bedrooms=6, bathrooms=4, sqft_living=5060, floors=3, condition=5, grade=10, sqft_above=3000, sqft_basement=2100, sqft_living15=4000), interval="confidence")
+```
+A 95% confidence interval for predicted sales of 1259337.58 price, is (1238926, 1279749)
+
+
+**LOGISTIC REGRESSION**
+
+For the second model to be fitted, which is Logistic Regression, we will read in data that predicts those who have 10-year risk of coronary heart disease   
+
+We'll read the data into an object called *heart* and check if there are NA values in the dataset
+```{r}
+heart <- read.csv("Heart_diseases.csv", header = TRUE, sep = ",")
+paste("There are",nrow(heart),"rows in the dataset"); paste("There are",sum(complete.cases(heart)),"complete rows"); paste("There are",sum(!complete.cases(heart)),"incomplete/NA rows")
+```
+
+Let's handle the missing data, but we will need to check for outliers that might skew the model fitting
+
+```{r}
+boxplot(heart$age);boxplot(heart$cigsPerDay);boxplot(heart$BMI);boxplot(heart$heartRate);boxplot(heart$glucose); boxplot(heart$totChol); boxplot(heart$sysBP); boxplot(heart$diaBP)
+```
+
+As displayed above, some features were not plotted because the values are considered hierarchical values.
+But for the other variables plotted, there are outliers in all except age.
+When replacing the missing values, the median will be used to replace NA values for columns with outliers(using the mean will result in extreme values closer to the outliers) while mean/median values will be used for features without outliers.
+
+Let's check the total number of NA values in each column
+```{r}
+colSums(is.na(heart))
+```
+We'll go ahead to replace the missing values
+
+```{r}
+#glucose
+heart$glucose <- ifelse(is.na(heart$glucose), median(heart$glucose,na.rm = T), heart$glucose)
+```
+
+
+```{r}
+#education
+heart$education <- ifelse(is.na(heart$education), median(heart$education, na.rm = T), heart$education)
+```
+
+
+```{r}
+#ciggs per day
+heart$cigsPerDay <- ifelse(is.na(heart$cigsPerDay), median(heart$cigsPerDay,na.rm = T), heart$cigsPerDay)
+```
+
+
+```{r}
+heart$BPMeds <- ifelse(is.na(heart$BPMeds), median(heart$BPMeds,na.rm = T), heart$BPMeds)
+```
+
+
+```{r}
+#totChol
+heart$totChol <- ifelse(is.na(heart$totChol), median(heart$totChol,na.rm = T), heart$totChol)
+```
+
+
+```{r}
+#BMI
+heart$BMI <- ifelse(is.na(heart$BMI), median(heart$BMI,na.rm = T), heart$BMI)
+```
+
+
+```{r}
+#heartRate
+heart$heartRate <- ifelse(is.na(heart$heartRate), median(heart$heartRate,na.rm = T), heart$heartRate)
+```
+
+Checking to see if there are still NA values in any column
+```{r}
+colSums(is.na(heart))
+```
+We will now proceed to check the data structure
+
+```{r}
+str(heart)
+```
+There are some variables appearing as integer values but are supposed to denote categorical levels. 
+These variables will have to be converted to factors for proper representation
+
+```{r}
+heart$male <- as.factor(heart$male)
+heart$education <- as.factor(heart$education)
+heart$currentSmoker <- as.factor(heart$currentSmoker)
+heart$BPMeds <- as.factor(heart$BPMeds)
+heart$prevalentStroke <- as.factor(heart$prevalentStroke)
+heart$prevalentHyp <- as.factor(heart$prevalentHyp)
+heart$diabetes <- as.factor(heart$diabetes)
+heart$TenYearCHD <- as.factor(heart$TenYearCHD)
+```
+
+Let's check the structures of the variables again
+```{r}
+str(heart)
+```
+The integer data types have been converted to factor levels as expected.
+We'll proceed to split the dataset into training and test data and afterwards, train the model
+
+```{r}
+set.seed(1)
+sample_heart <- sample(c(TRUE, FALSE), nrow(heart), replace=TRUE, prob=c(0.75,0.25))
+train_heart <- heart[sample_heart, ]
+test_heart <- heart[!sample_heart, ]
+nrow(train_heart);nrow(test_heart)
+```
+Fitting the logistic regression model
+
+```{r}
+logistic_heart <- glm(TenYearCHD ~ male+age+education+currentSmoker+cigsPerDay+BPMeds+prevalentStroke+prevalentHyp+diabetes+totChol+sysBP+diaBP+BMI+heartRate+glucose, data = train_heart, family = "binomial")
+summary(logistic_heart)
+```
+
+Let's remove some insignificant variables to further increase the accuracy of the model
+
+```{r}
+logistic_heart <- glm(TenYearCHD ~ male+age+cigsPerDay+BPMeds+prevalentStroke+totChol+sysBP+glucose, data = train_heart, family = "binomial")
+summary(logistic_heart)
+```
+Predicting the values of the test data
+
+```{r}
+pred_heart <- predict(logistic_heart,newdata = test_heart[,-16],type = "response")
+summary(pred_heart);pred_test_data <- ifelse(pred_heart>0.5,1,0);summary(pred_test_data)
+```
+Creating a confusion Matrix 
+
+```{r}
+confusion_matrix <- table(pred_test_data,test_heart$TenYearCHD)
+confusion_matrix
+```
+
+Checking the model accuracy
+```{r}
+acc <- (sum(diag(confusion_matrix))/sum(confusion_matrix))*100
+paste("Overall accuracy with threshold 0.5 is",round(acc, digits = 0),"%")
+```
+
